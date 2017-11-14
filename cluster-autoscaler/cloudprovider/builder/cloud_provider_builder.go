@@ -30,6 +30,7 @@ import (
 	kubemarkcontroller "k8s.io/kubernetes/pkg/kubemark"
 
 	"github.com/golang/glog"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/autoscalr"
 )
 
 // CloudProviderBuilder builds a cloud provider from all the necessary parameters including the name of a cloud provider e.g. aws, gce
@@ -89,6 +90,28 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 	//		glog.Fatalf("Failed to create GCE cloud provider: %v", err)
 	//	}
 	//}
+
+	if b.cloudProviderFlag == "autoscalr" {
+		var asrManager *autoscalr.AutoScalrManager
+		var asrError error
+		if b.cloudConfig != "" {
+			config, fileErr := os.Open(b.cloudConfig)
+			if fileErr != nil {
+				glog.Fatalf("Couldn't open cloud provider configuration %s: %#v", b.cloudConfig, err)
+			}
+			defer config.Close()
+			asrManager, asrError = autoscalr.CreateAutoScalrManager(config)
+		} else {
+			asrManager, asrError = autoscalr.CreateAutoScalrManager(nil)
+		}
+		if asrError != nil {
+			glog.Fatalf("Failed to create AutoScalr Manager: %v", err)
+		}
+		cloudProvider, err = autoscalr.BuildAutoScalrCloudProvider(asrManager, discoveryOpts, resourceLimiter)
+		if err != nil {
+			glog.Fatalf("Failed to create AutoScalr cloud provider: %v", err)
+		}
+	}
 
 	if b.cloudProviderFlag == "aws" {
 		var awsManager *aws.AwsManager
