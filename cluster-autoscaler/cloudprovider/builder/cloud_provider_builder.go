@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
-	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/gce"
+	//"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/gce"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/kubemark"
 	"k8s.io/client-go/informers"
 	kubeclient "k8s.io/client-go/kubernetes"
@@ -58,37 +58,37 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 
 	nodeGroupsFlag := discoveryOpts.NodeGroupSpecs
 
-	if b.cloudProviderFlag == "gce" || b.cloudProviderFlag == "gke" {
-		// GCE Manager
-		var gceManager gce.GceManager
-		var gceError error
-		mode := gce.ModeGCE
-		if b.cloudProviderFlag == "gke" {
-			if b.autoprovisioningEnabled {
-				mode = gce.ModeGKENAP
-			} else {
-				mode = gce.ModeGKE
-			}
-		}
-
-		if b.cloudConfig != "" {
-			config, fileErr := os.Open(b.cloudConfig)
-			if fileErr != nil {
-				glog.Fatalf("Couldn't open cloud provider configuration %s: %#v", b.cloudConfig, err)
-			}
-			defer config.Close()
-			gceManager, gceError = gce.CreateGceManager(config, mode, b.clusterName)
-		} else {
-			gceManager, gceError = gce.CreateGceManager(nil, mode, b.clusterName)
-		}
-		if gceError != nil {
-			glog.Fatalf("Failed to create GCE Manager: %v", gceError)
-		}
-		cloudProvider, err = gce.BuildGceCloudProvider(gceManager, nodeGroupsFlag, resourceLimiter)
-		if err != nil {
-			glog.Fatalf("Failed to create GCE cloud provider: %v", err)
-		}
-	}
+	//if b.cloudProviderFlag == "gce" || b.cloudProviderFlag == "gke" {
+	//	// GCE Manager
+	//	var gceManager gce.GceManager
+	//	var gceError error
+	//	mode := gce.ModeGCE
+	//	if b.cloudProviderFlag == "gke" {
+	//		if b.autoprovisioningEnabled {
+	//			mode = gce.ModeGKENAP
+	//		} else {
+	//			mode = gce.ModeGKE
+	//		}
+	//	}
+	//
+	//	if b.cloudConfig != "" {
+	//		config, fileErr := os.Open(b.cloudConfig)
+	//		if fileErr != nil {
+	//			glog.Fatalf("Couldn't open cloud provider configuration %s: %#v", b.cloudConfig, err)
+	//		}
+	//		defer config.Close()
+	//		gceManager, gceError = gce.CreateGceManager(config, mode, b.clusterName)
+	//	} else {
+	//		gceManager, gceError = gce.CreateGceManager(nil, mode, b.clusterName)
+	//	}
+	//	if gceError != nil {
+	//		glog.Fatalf("Failed to create GCE Manager: %v", gceError)
+	//	}
+	//	cloudProvider, err = gce.BuildGceCloudProvider(gceManager, nodeGroupsFlag, resourceLimiter)
+	//	if err != nil {
+	//		glog.Fatalf("Failed to create GCE cloud provider: %v", err)
+	//	}
+	//}
 
 	if b.cloudProviderFlag == "aws" {
 		var awsManager *aws.AwsManager
