@@ -25,6 +25,13 @@ type AutoScalrManager struct {
 	random   string
 }
 
+func createAutoScalrManagerInternal(configReader io.Reader) (*AutoScalrManager, error) {
+	manager := &AutoScalrManager{
+		random: "Test-jay",
+	}
+	return manager, nil
+}
+
 func CreateAutoScalrManager(configReader io.Reader) (*AutoScalrManager, error) {
-	return nil, nil
+	return createAutoScalrManagerInternal(configReader)
 }

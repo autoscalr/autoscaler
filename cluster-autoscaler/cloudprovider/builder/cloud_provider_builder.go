@@ -92,8 +92,11 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 	//}
 
 	if b.cloudProviderFlag == "autoscalr" {
+		glog.V(0).Infof("provider autoscalr in pass through to aws mode")
 		var asrManager *autoscalr.AutoScalrManager
+		var awsManager *aws.AwsManager
 		var asrError error
+		var awsError error
 		if b.cloudConfig != "" {
 			config, fileErr := os.Open(b.cloudConfig)
 			if fileErr != nil {
@@ -101,13 +104,18 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 			}
 			defer config.Close()
 			asrManager, asrError = autoscalr.CreateAutoScalrManager(config)
+			awsManager, awsError = aws.CreateAwsManager(config)
 		} else {
 			asrManager, asrError = autoscalr.CreateAutoScalrManager(nil)
+			awsManager, awsError = aws.CreateAwsManager(nil)
 		}
 		if asrError != nil {
 			glog.Fatalf("Failed to create AutoScalr Manager: %v", err)
 		}
-		cloudProvider, err = autoscalr.BuildAutoScalrCloudProvider(asrManager, discoveryOpts, resourceLimiter)
+		if awsError != nil {
+			glog.Fatalf("Failed to create AWS Manager: %v", err)
+		}
+		cloudProvider, err = autoscalr.BuildAutoScalrCloudProvider(asrManager, discoveryOpts, resourceLimiter, awsManager)
 		if err != nil {
 			glog.Fatalf("Failed to create AutoScalr cloud provider: %v", err)
 		}
