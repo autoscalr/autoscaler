@@ -19,11 +19,11 @@ package autoscalr
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	//"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"os"
 )
 
-func setEnvTestCase1() {
+func SetEnvTestCase1() {
 	os.Setenv("AWS_REGION", "us-east-1")
 	os.Setenv("AUTOSCALR_API_KEY", "myApiKey")
 	os.Setenv("DISPLAY_NAME", "nameToDisplayInUI")
@@ -37,19 +37,21 @@ func setEnvTestCase1() {
 	os.Setenv("TARGET_CAPACITY_INSTANCES", "2")
 	os.Setenv("TARGET_SPARE_MEMORY_PERCENT", "20")
 }
+func getDiscoveryOptionsTestCase1() cloudprovider.NodeGroupDiscoveryOptions {
+    return cloudprovider.NodeGroupDiscoveryOptions{
+		NodeGroupSpecs: []string{"1:6:asgName"},
+		NodeGroupAutoDiscoverySpec: "",
+	}
+}
 
 func TestEnvSetCorrectly(t *testing.T) {
-	setEnvTestCase1()
+	SetEnvTestCase1()
 	assert.Equal(t, os.Getenv("AWS_REGION"), "us-east-1")
 }
 
 func TestBuildAutoScalrCloudProvider(t *testing.T) {
-	//asrCloudProv, _ := BuildAutoScalrCloudProvider(asrMgr, discoveryOpts, resourceLimiter)
-	//discOpts := cloudprovider.NodeGroupDiscoveryOptions{
-	//	NodeGroupSpecs: [],
-	//	NodeGroupAutoDiscoverySpec: "",
-	//}
-	//asrCloudProv, _ := BuildAutoScalrCloudProvider(nil, discOpts, nil)
-	asrCloudProv := "val"
+	SetEnvTestCase1()
+	discOpts := getDiscoveryOptionsTestCase1()
+	asrCloudProv, _ := BuildAutoScalrCloudProvider(nil, discOpts, nil)
 	assert.NotNil(t, asrCloudProv)
 }
