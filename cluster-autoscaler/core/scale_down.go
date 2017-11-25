@@ -397,11 +397,13 @@ func (sd *ScaleDown) TryToScaleDown(allNodes []*apiv1.Node, pods []*apiv1.Pod, p
 
 			// Check how long the node was underutilized.
 			if ready && !val.Add(sd.context.ScaleDownUnneededTime).Before(currentTime) {
+				glog.V(4).Infof("Skipping %s - ScaleDownUnneededTime not met", node.Name)
 				continue
 			}
 
 			// Unready nodes may be deleted after a different time than unrerutilized.
 			if !ready && !val.Add(sd.context.ScaleDownUnreadyTime).Before(currentTime) {
+				glog.V(4).Infof("Skipping %s - ScaleDownUnreadyTime not met", node.Name)
 				continue
 			}
 

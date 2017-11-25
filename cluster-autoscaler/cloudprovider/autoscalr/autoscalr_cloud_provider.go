@@ -36,19 +36,26 @@ type autoScalrCloudProvider struct {
 
 func BuildAutoScalrCloudProvider(autoScalrManager *AutoScalrManager, discoveryOpts cloudprovider.NodeGroupDiscoveryOptions, resourceLimiter *cloudprovider.ResourceLimiter, awsManager *aws.AwsManager) (*autoScalrCloudProvider, error) {
 	awsProv, err := aws.BuildAwsCloudProvider(awsManager, discoveryOpts, resourceLimiter)
-	for _, spec := range discoveryOpts.NodeGroupSpecs {
-		specObj, err := dynamic.SpecFromString(spec, true)
-		if err != nil {
-			// Record ASG in env variable
-			os.Setenv("AUTOSCALING_GROUP_NAME", specObj.Name)
+	if err != nil {
+		glog.V(0).Infof("Received error from BuildAwsCloudProvider: %s", err.Error())
+	} else {
+		for _, spec := range discoveryOpts.NodeGroupSpecs {
+			specObj, err := dynamic.SpecFromString(spec, true)
+			if err != nil {
+				glog.V(0).Infof("Received error from SpecFromString: %s", err.Error())
+			} else {
+				// Record ASG in env variable
+				os.Setenv("AUTOSCALING_GROUP_NAME", specObj.Name)
+			}
 		}
+		createAsrAppIfNeeded()
+		provider := &autoScalrCloudProvider{
+			autoScalrManager: autoScalrManager,
+			awsProvider:      awsProv,
+		}
+		return provider, err
 	}
-	createAsrAppIfNeeded()
-	provider := &autoScalrCloudProvider{
-		autoScalrManager: autoScalrManager,
-		awsProvider: awsProv,
-	}
-	return provider, err
+	return nil, err
 }
 
 func createAsrAppIfNeeded() error {
@@ -180,6 +187,8 @@ func (asrNG *asrNodeGroup) DeleteNodes(nodes []*apiv1.Node) error {
 	numVcpu := numVCpusBaseType()
 	currSize, err := asrNG.TargetSize()
 	if err != nil {
+		glog.V(0).Infof("Received error from TargetSize: %s", err.Error())
+	} else {
 		newTarget := currSize - (numNodesToDelete * numVcpu)
 		glog.V(0).Infof("Setting new target capacity: %v",newTarget)
 		err = appDefUpdate(newTarget)
