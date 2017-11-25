@@ -19,6 +19,7 @@ package autoscalr
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"os"
 )
 
 func TestOne(t *testing.T) {
@@ -28,4 +29,40 @@ func TestOne(t *testing.T) {
 func TestCreateAutoScalrManager(t *testing.T) {
 	asrMgr, _ := CreateAutoScalrManager(nil)
 	assert.NotNil(t, asrMgr)
+}
+
+func TestAppDefCreate(t *testing.T){
+	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
+	os.Setenv("AWS_REGION", "us-east-1")
+	os.Setenv("INSTANCE_TYPES", "c3.large,c3.xlarge")
+	os.Setenv("TARGET_CAPACITY_VCPUS", "1")
+	err := appDefCreate()
+
+	assert.NoError(t, err)
+}
+
+func TestAppDefRead(t *testing.T){
+	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
+	os.Setenv("AWS_REGION", "us-east-1")
+
+	appDefTest, err := appDefRead()
+
+	assert.NoError(t, err, appDefTest)
+}
+
+func TestAppDefUpdate(t *testing.T){
+	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
+	os.Setenv("AWS_REGION", "us-east-1")
+	target_capacity := 2
+
+	err := appDefUpdate(target_capacity)
+	assert.NoError(t, err)
+}
+
+func TestAppDefDelete(t *testing.T){
+	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
+	os.Setenv("AWS_REGION", "us-east-1")
+
+	err := appDefDelete()
+	assert.NoError(t, err)
 }

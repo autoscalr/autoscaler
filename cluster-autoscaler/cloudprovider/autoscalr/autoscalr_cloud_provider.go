@@ -17,6 +17,7 @@ limitations under the License.
 package autoscalr
 
 import (
+	"os"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -24,6 +25,7 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/utils/errors"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
 	"github.com/golang/glog"
+	"k8s.io/autoscaler/cluster-autoscaler/config/dynamic"
 )
 
 // autoScalrCloudProvider implements CloudProvider interface.
@@ -34,11 +36,24 @@ type autoScalrCloudProvider struct {
 
 func BuildAutoScalrCloudProvider(autoScalrManager *AutoScalrManager, discoveryOpts cloudprovider.NodeGroupDiscoveryOptions, resourceLimiter *cloudprovider.ResourceLimiter, awsManager *aws.AwsManager) (*autoScalrCloudProvider, error) {
 	awsProv, err := aws.BuildAwsCloudProvider(awsManager, discoveryOpts, resourceLimiter)
+	for _, spec := range discoveryOpts.NodeGroupSpecs {
+		specObj, err := dynamic.SpecFromString(spec, true)
+		if err != nil {
+			// Record ASG in env variable
+			os.Setenv("AUTOSCALING_GROUP_NAME", specObj.Name)
+		}
+	}
+	createAsrAppIfNeeded()
 	provider := &autoScalrCloudProvider{
 		autoScalrManager: autoScalrManager,
 		awsProvider: awsProv,
 	}
 	return provider, err
+}
+
+func createAsrAppIfNeeded() error {
+	err := appDefCreate()
+	return err
 }
 
 // Name returns name of the cloud provider.
@@ -118,34 +133,69 @@ func BuildAutoScalrNodeGroup(aNode cloudprovider.NodeGroup) (cloudprovider.NodeG
 }
 
 func (asrNG *asrNodeGroup) MaxSize() int {
+	glog.V(0).Infof("AsrNodeGroup::MaxSize")
 	return asrNG.awsNodeGroup.MaxSize()
 }
 
 func (asrNG *asrNodeGroup) MinSize() int {
+	glog.V(0).Infof("AsrNodeGroup::MinSize")
 	return asrNG.awsNodeGroup.MinSize()
 }
 
 func (asrNG *asrNodeGroup) TargetSize() (int, error) {
 	glog.V(0).Infof("AsrNodeGroup::TargetSize")
-	return asrNG.awsNodeGroup.TargetSize()
+	app, err := appDefRead()
+	tSize := 0
+	if err != nil {
+		glog.V(0).Infof("Received error from appDefRead: %s", err.Error())
+	}
+	if app != nil {
+		numVcpu := numVCpusBaseType()
+		tSize = app.TargetCapacity / numVcpu
+	}
+	glog.V(0).Infof("Returning TargetSize: %d",tSize)
+	return tSize, err
 }
 
 func (asrNG *asrNodeGroup) IncreaseSize(delta int) error {
-	glog.V(0).Infof("AsrNodeGroup::IncreaseSize")
-	return asrNG.awsNodeGroup.IncreaseSize(delta)
+	glog.V(0).Infof("AsrNodeGroup::IncreaseSize delta: %v",delta)
+	currSize, err := asrNG.TargetSize()
+	if err != nil {
+		glog.V(0).Infof("TargetSize returned error: %v", err.Error())
+	} else {
+		glog.V(0).Infof("currSize: %v",currSize)
+		numVcpu := numVCpusBaseType()
+		glog.V(0).Infof("numVcpu: %v",numVcpu)
+		newTarget := (currSize + delta) * numVcpu
+		glog.V(0).Infof("newTarget: %v",newTarget)
+		err = appDefUpdate(newTarget)
+	}
+	return err
 }
 
 func (asrNG *asrNodeGroup) DeleteNodes(nodes []*apiv1.Node) error {
 	glog.V(0).Infof("AsrNodeGroup::DeleteNodes")
-	return asrNG.awsNodeGroup.DeleteNodes(nodes)
+	numNodesToDelete := len(nodes)
+	glog.V(0).Infof("Deleting %v nodes",numNodesToDelete)
+	numVcpu := numVCpusBaseType()
+	currSize, err := asrNG.TargetSize()
+	if err != nil {
+		newTarget := currSize - (numNodesToDelete * numVcpu)
+		glog.V(0).Infof("Setting new target capacity: %v",newTarget)
+		err = appDefUpdate(newTarget)
+	}
+	return err
 }
 
 func (asrNG *asrNodeGroup) DecreaseTargetSize(delta int) error {
 	glog.V(0).Infof("AsrNodeGroup::DecreaseTargetSize")
-	return asrNG.awsNodeGroup.DecreaseTargetSize(delta)
+	return nil
+	//return cloudprovider.ErrNotImplemented
+	//return asrNG.awsNodeGroup.DecreaseTargetSize(delta)
 }
 
 func (asrNG *asrNodeGroup) Id() string {
+	glog.V(0).Infof("AsrNodeGroup::Id")
 	return asrNG.awsNodeGroup.Id()
 }
 
@@ -154,25 +204,43 @@ func (asrNG *asrNodeGroup) Debug() string {
 }
 
 func (asrNG *asrNodeGroup) Nodes() ([]string, error) {
+	glog.V(0).Infof("AsrNodeGroup::Nodes")
 	return asrNG.awsNodeGroup.Nodes()
 }
 
 func (asrNG *asrNodeGroup) TemplateNodeInfo() (*schedulercache.NodeInfo, error) {
+	glog.V(0).Infof("AsrNodeGroup::TemplateNodeInfo")
 	return asrNG.awsNodeGroup.TemplateNodeInfo()
 }
 
 func (asrNG *asrNodeGroup) Exist() bool {
-	return asrNG.awsNodeGroup.Exist()
+	glog.V(0).Infof("AsrNodeGroup::Exist")
+	app, err := appDefRead()
+	exists := false
+	if err != nil {
+		glog.V(0).Infof("Received error from appDefRead: %s", err.Error())
+	}
+	if app != nil {
+		exists = true
+	}
+	glog.V(0).Infof("Returning exists: %v",exists)
+	return exists
+	//return asrNG.awsNodeGroup.Exist()
 }
 
 func (asrNG *asrNodeGroup) Create() error {
-	return asrNG.awsNodeGroup.Create()
+	glog.V(0).Infof("AsrNodeGroup::Create")
+	return appDefCreate()
+	//return asrNG.awsNodeGroup.Create()
 }
 
 func (asrNG *asrNodeGroup) Delete() error {
-	return asrNG.awsNodeGroup.Delete()
+	glog.V(0).Infof("AsrNodeGroup::Delete")
+	return appDefDelete()
+	//return asrNG.awsNodeGroup.Delete()
 }
 
 func (asrNG *asrNodeGroup) Autoprovisioned() bool {
-	return asrNG.awsNodeGroup.Autoprovisioned()
+	glog.V(0).Infof("AsrNodeGroup::Autoprovisioned")
+	return false
 }
