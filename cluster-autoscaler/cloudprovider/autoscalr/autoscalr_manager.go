@@ -71,6 +71,12 @@ type AppDefUpdate struct {
 	AwsRegion                   string   `json:"aws_region"`
 	TargetCapacity		        int      `json:"target_capacity"`
 }
+type AppDefNodeDelete struct {
+	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
+	AwsRegion                   string   `json:"aws_region"`
+	DeltaVCpu			        int      `json:"delta_vcpu"`
+	NodesToDelete               []string `json:"nodes_to_delete"`
+}
 
 type AutoScalrRequest struct {
 	AsrToken    string  `json:"api_key"`
@@ -82,6 +88,12 @@ type AutoScalrUpdateRequest struct {
 	AsrToken    string  `json:"api_key"`
 	RequestType string  `json:"request_type"`
 	AsrAppDef   *AppDefUpdate `json:"autoscalr_app_def"`
+}
+
+type AutoScalrNodeDeleteRequest struct {
+	AsrToken    string  `json:"api_key"`
+	RequestType string  `json:"request_type"`
+	AsrAppDef   *AppDefNodeDelete `json:"autoscalr_app_def"`
 }
 
 type AsrApiErrorResponse struct {
@@ -99,6 +111,11 @@ func numVCpusBaseType() int {
 	baseType := instanceTypesArr[0]
 	baseTypeStats := InstanceTypes[baseType]
 	return int(baseTypeStats.VCPU)
+}
+
+func InstanceIdFromProviderId(id string) (string) {
+	splitted := strings.Split(id[7:], "/")
+	return splitted[1]
 }
 
 func makeApiCall(asrReq *AutoScalrRequest) (int, *AppDef, error) {
@@ -139,6 +156,43 @@ func makeApiCall(asrReq *AutoScalrRequest) (int, *AppDef, error) {
 }
 
 func makeUpdateApiCall(asrReq *AutoScalrUpdateRequest) (int, *AppDef, error) {
+	url := "https://app.autoscalr.com/api/autoScalrApp"
+	client := &http.Client{
+		Timeout: time.Second * 20,
+	}
+	postBody := new(bytes.Buffer)
+	json.NewEncoder(postBody).Encode(asrReq)
+	app := new(AppDef)
+	resp, err := client.Post(url, "application/json", postBody)
+	if resp != nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			// make 2 copies of response, one for error decoding and one for good response
+			respBuf := new(bytes.Buffer)
+			respBuf.ReadFrom(resp.Body)
+			errBuf := bytes.NewBuffer(respBuf.Bytes())
+			// Check for error response json
+			jsonErr := new(AsrApiErrorResponse)
+			json.NewDecoder(errBuf).Decode(jsonErr)
+			if jsonErr.Error != nil && jsonErr.Error.ErrorMessage != ""  {
+				// error response
+				err = errors.New(fmt.Sprintf("Error response: %s", jsonErr.Error.ErrorMessage))
+			} else {
+				// looks like good response
+				json.NewDecoder(respBuf).Decode(app)
+			}
+			return resp.StatusCode, app, err
+		} else {
+			err = errors.New(fmt.Sprintf("AutoScalr API returned: %d", resp.Status))
+			return resp.StatusCode, app, err
+		}
+	} else {
+		//log.Println("Error: %s", err.Error())
+		return 500, app, err
+	}
+}
+
+func makeDeleteNodesApiCall(asrReq *AutoScalrNodeDeleteRequest) (int, *AppDef, error) {
 	url := "https://app.autoscalr.com/api/autoScalrApp"
 	client := &http.Client{
 		Timeout: time.Second * 20,
@@ -242,6 +296,24 @@ func appDefUpdate(target_capacity int) error {
 		},
 	}
 	respCode, _, err := makeUpdateApiCall(body)
+	if respCode > 400 {
+		err = fmt.Errorf("AutoScalr API returned status code: %d", respCode)
+	}
+	return err
+}
+
+func appDefDeleteNodes(deltaVcpu int, nodesToDel []string) error {
+	body := &AutoScalrNodeDeleteRequest{
+		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
+		RequestType: "DeleteAppNodes",
+		AsrAppDef: &AppDefNodeDelete{
+			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
+			AwsRegion:                   os.Getenv("AWS_REGION"),
+			DeltaVCpu:         	 		1,
+			NodesToDelete: 				nodesToDel,
+		},
+	}
+	respCode, _, err := makeDeleteNodesApiCall(body)
 	if respCode > 400 {
 		err = fmt.Errorf("AutoScalr API returned status code: %d", respCode)
 	}

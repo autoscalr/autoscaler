@@ -59,6 +59,17 @@ func TestAppDefUpdate(t *testing.T){
 	assert.NoError(t, err)
 }
 
+func TestAppDefDeleteNodes(t *testing.T){
+	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
+	os.Setenv("AWS_REGION", "us-east-1")
+	delta_vcpu := 1
+	nodes2Del := make([]string, 1)
+	nodes2Del[0] = "nodeId1"
+
+	err := appDefDeleteNodes(delta_vcpu, nodes2Del)
+	assert.NoError(t, err)
+}
+
 func TestAppDefDelete(t *testing.T){
 	os.Setenv("AUTOSCALING_GROUP_NAME", "testASG")
 	os.Setenv("AWS_REGION", "us-east-1")
