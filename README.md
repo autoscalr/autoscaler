@@ -78,6 +78,12 @@ spec:
             path: "/etc/ssl/certs/ca-certificates.crt"
 ```
 
+## AUTOSCALR_API_KEY
+
+If have an AutoScalr account, you can login at [autoscalr.com](https://app.autoscalr.com) to get your api key.
+
+If you do not have an AutoScalr account, you can signup for a free 14 day trial [here](https://aws.amazon.com/marketplace/pp/B074N1N5QM).
+
 ## Environment Variable Reference
 
 The following environment variables are supported:
@@ -85,7 +91,7 @@ The following environment variables are supported:
 * `AWS_REGION` - (Required) AWS Region the k8s cluster is running in
 * `AUTOSCALR_API_KEY` - (Required) The api key provided by AutoScalr when you signup
 * `DISPLAY_NAME` - (Required) Short name to be used in AutoScalr web UI display
-* `INSTANCE_TYPES` - (Required) List of instance types to use
+* `INSTANCE_TYPES` - (Required) Comma delimited list of instance types to use
 * `MAX_HOURS_INSTANCE_AGE` - (Optional, Default: off) When set, AutoScalr will schedule instance replacement if an instance's age exceeds this setting
 * `MAX_SPOT_PERCENT_TOTAL` - (Optional, Default: 80) Maximum percentage of capacity to allow in Spot instances
 * `MAX_SPOT_PERCENT_ONE_MARKET` - (Optional, Default: 20) Maximum percentage of capacity to allow in a single Spot market
@@ -95,9 +101,11 @@ The following environment variables are supported:
 
 ## Supported Versions
 
-The referenced image is built against Kubernetes 1.9
+The referenced image is built and tested against Kubernetes 1.9.
 
-For other versions, you will need to build the image from source, or contact us for assistance.
+For use with other versions, a rebuild of the image from source may be required.
+
+Contact us if you need assistance with another version.
 
 ## Contact Info
 
