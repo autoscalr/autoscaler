@@ -222,7 +222,7 @@ func (asrNG *asrNodeGroup) Nodes() ([]string, error) {
 }
 
 func (asrNG *asrNodeGroup) TemplateNodeInfo() (*schedulercache.NodeInfo, error) {
-	glog.V(0).Infof("AsrNodeGroup::TemplateNodeInfo")
+	//glog.V(0).Infof("AsrNodeGroup::TemplateNodeInfo")
 	return asrNG.awsNodeGroup.TemplateNodeInfo()
 }
 
