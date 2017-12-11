@@ -1,7 +1,7 @@
 # Kubernetes Autoscaler with AutoScalr Support
 
 
-This repository contains a version of the Kubernetes Cluster AutoScaler component that works with AutoScalr to reduce the cost of running your k8s cluster by 50%-75%.
+This repository contains a version of the Kubernetes Cluster AutoScaler component that works with AutoScalr to reduce the cost of running your k8s cluster by 50%-75% by changing one yaml file.
 
 ## Usage
 
@@ -101,7 +101,7 @@ The following environment variables are supported:
 
 ## Supported Versions
 
-The referenced image is built and tested against Kubernetes 1.9.
+The referenced image is built against Kubernetes 1.9, and has been tested against 1.7, 1.8, and 1.9.
 
 For use with other versions, a rebuild of the image from source may be required.
 
