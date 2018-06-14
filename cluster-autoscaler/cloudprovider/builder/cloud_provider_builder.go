@@ -20,6 +20,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/autoscalr"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/azure"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/gce"
 	"os"
@@ -89,6 +90,36 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 		cloudProvider, err = aws.BuildAwsCloudProvider(awsManager, discoveryOpts)
 		if err != nil {
 			glog.Fatalf("Failed to create AWS cloud provider: %v", err)
+		}
+	}
+
+	if b.cloudProviderFlag == "autoscalr" {
+		glog.V(0).Infof("provider autoscalr in pass through to aws mode")
+		var asrManager *autoscalr.AutoScalrManager
+		var awsManager *aws.AwsManager
+		var asrError error
+		var awsError error
+		if b.cloudConfig != "" {
+			config, fileErr := os.Open(b.cloudConfig)
+			if fileErr != nil {
+				glog.Fatalf("Couldn't open cloud provider configuration %s: %#v", b.cloudConfig, err)
+			}
+			defer config.Close()
+			asrManager, asrError = autoscalr.CreateAutoScalrManager(config)
+			awsManager, awsError = aws.CreateAwsManager(config)
+		} else {
+			asrManager, asrError = autoscalr.CreateAutoScalrManager(nil)
+			awsManager, awsError = aws.CreateAwsManager(nil)
+		}
+		if asrError != nil {
+			glog.Fatalf("Failed to create AutoScalr Manager: %v", err)
+		}
+		if awsError != nil {
+			glog.Fatalf("Failed to create AWS Manager: %v", err)
+		}
+		cloudProvider, err = autoscalr.BuildAutoScalrCloudProvider(asrManager, discoveryOpts, awsManager)
+		if err != nil {
+			glog.Fatalf("Failed to create AutoScalr cloud provider: %v", err)
 		}
 	}
 

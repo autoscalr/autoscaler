@@ -1,0 +1,1 @@
+docker build -t autoscalr/k8s_autoscalr:v0.6.0 ..
