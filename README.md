@@ -36,8 +36,8 @@ spec:
         app: cluster-autoscaler
     spec:
       containers:
--       - image: gcr.io/google_containers/cluster-autoscaler:v0.6.0        
-+       - image: autoscalr/k8s_autoscalr:v0.6.0
+-       - image: gcr.io/google_containers/cluster-autoscaler:v0.6.4        
++       - image: autoscalr/k8s_autoscalr:v0.6.4
           name: cluster-autoscaler
           resources:
             limits:
@@ -101,7 +101,7 @@ The following environment variables are supported:
 
 ## Supported Versions
 
-The referenced image is built against Kubernetes 1.7 using upstream cluster-autoscaler 0.6.0
+The referenced image is built against Kubernetes 1.7 using upstream cluster-autoscaler 0.6.4
 
 For use with other versions, check other branches or rebuild of the image from source.
 
