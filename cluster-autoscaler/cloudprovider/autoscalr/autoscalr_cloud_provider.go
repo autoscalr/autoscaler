@@ -196,7 +196,7 @@ func (asrNG *asrNodeGroup) Debug() string {
 }
 
 func (asrNG *asrNodeGroup) Nodes() ([]string, error) {
-	//glog.V(0).Infof("AsrNodeGroup::Nodes")
+	glog.V(0).Infof("AsrNodeGroup::Nodes")
 	return asrNG.awsNodeGroup.Nodes()
 }
 
