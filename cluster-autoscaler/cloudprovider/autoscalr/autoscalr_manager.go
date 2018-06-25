@@ -57,6 +57,7 @@ type AppDef struct {
 	TargetSpareMemoryPercent    int      `json:"target_spare_memory_percent"`
 	QueueName                   string   `json:"queue_name"`
 	TargetQueueSize             int      `json:"target_queue_size"`
+	InstanceSpinUpSeconds       int      `json:"instance_spin_up_seconds"`
 	MaxMinutesToTargetQueueSize int      `json:"max_minutes_to_target_queue_size"`
 	DisplayName                 string   `json:"display_name"`
 	DetailedMonitoringEnabled   bool     `json:"detailed_monitoring_enabled"`
@@ -252,6 +253,7 @@ func appDefCreate() error {
 			TargetSpareMemoryPercent:    0,
 			QueueName:                   "",
 			TargetQueueSize:             0,
+			InstanceSpinUpSeconds:       15,
 			MaxMinutesToTargetQueueSize: 0,
 			DisplayName:                 os.Getenv("DISPLAY_NAME"),
 			DetailedMonitoringEnabled:   detailedMonitoring,
