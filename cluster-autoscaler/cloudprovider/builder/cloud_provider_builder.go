@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/autoscalr"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/azure"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/gce"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/kubemark"
@@ -83,6 +84,8 @@ func (b CloudProviderBuilder) Build(discoveryOpts cloudprovider.NodeGroupDiscove
 		return b.buildGCE(discoveryOpts, resourceLimiter, gce.ModeGKE)
 	case aws.ProviderName:
 		return b.buildAWS(discoveryOpts, resourceLimiter)
+	case autoscalr.ProviderName:
+		return b.buildAutoScalr(discoveryOpts, resourceLimiter)
 	case azure.ProviderName:
 		return b.buildAzure(discoveryOpts, resourceLimiter)
 	case kubemark.ProviderName:
@@ -140,6 +143,33 @@ func (b CloudProviderBuilder) buildAWS(do cloudprovider.NodeGroupDiscoveryOption
 	provider, err := aws.BuildAwsCloudProvider(manager, rl)
 	if err != nil {
 		glog.Fatalf("Failed to create AWS cloud provider: %v", err)
+	}
+	return provider
+}
+
+func (b CloudProviderBuilder) buildAutoScalr(do cloudprovider.NodeGroupDiscoveryOptions, rl *cloudprovider.ResourceLimiter) cloudprovider.CloudProvider {
+	var config io.ReadCloser
+	if b.cloudConfig != "" {
+		var err error
+		config, err = os.Open(b.cloudConfig)
+		if err != nil {
+			glog.Fatalf("Couldn't open cloud provider configuration %s: %#v", b.cloudConfig, err)
+		}
+		defer config.Close()
+	}
+
+	asrManager, asrError := autoscalr.CreateAutoScalrManager(config, do)
+	if asrError != nil {
+		glog.Fatalf("Failed to create AutoScalr Manager: %v", asrError)
+	}
+	awsManager, awsError := aws.CreateAwsManager(config, do)
+	if awsError != nil {
+		glog.Fatalf("Failed to create AWS Manager: %v", awsError)
+	}
+
+	provider, err := autoscalr.BuildAutoScalrCloudProvider(asrManager, rl, awsManager)
+	if err != nil {
+		glog.Fatalf("Failed to create AutoScalr cloud provider: %v", err)
 	}
 	return provider
 }

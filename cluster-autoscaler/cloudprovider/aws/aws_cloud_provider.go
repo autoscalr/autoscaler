@@ -271,7 +271,11 @@ func (asg *Asg) DeleteNodes(nodes []*apiv1.Node) error {
 
 // Id returns asg id.
 func (asg *Asg) Id() string {
-	return asg.Name
+	if asg != nil {
+		return asg.Name
+	} else {
+		return ""
+	}
 }
 
 // Debug returns a debug string for the Asg.
