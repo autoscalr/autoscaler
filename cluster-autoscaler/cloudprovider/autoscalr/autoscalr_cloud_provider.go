@@ -19,11 +19,18 @@ package autoscalr
 import (
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
 	"k8s.io/autoscaler/cluster-autoscaler/utils/errors"
 	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"github.com/golang/glog"
+	//"k8s.io/client-go/rest"
+	kube_client "k8s.io/client-go/kubernetes"
+	"k8s.io/autoscaler/cluster-autoscaler/config"
+	"net/url"
+	"os"
+	"fmt"
 )
 
 const (
@@ -113,7 +120,74 @@ func (asrProvider *autoScalrCloudProvider) GetResourceLimiter() (*cloudprovider.
 // Refresh is called before every main loop and can be used to dynamically update cloud provider state.
 // In particular the list of node groups returned by NodeGroups can change as a result of CloudProvider.Refresh().
 func (asrProvider *autoScalrCloudProvider) Refresh() error {
-	return asrProvider.awsProvider.Refresh()
+	err := asrProvider.awsProvider.Refresh()
+	if err != nil {
+		glog.Errorf("Failed to refresh cloud provider config: %v", err)
+		return err
+	}
+
+	depFlag := os.Getenv("ANAYLZE_DEPLOYMENTS")
+	if depFlag != "false" {
+		err = asrProvider.CollectClusterState()
+	}
+	return err
+}
+
+func (asrProvider *autoScalrCloudProvider) CollectClusterState() error {
+	glog.V(4).Info("Starting CollectClusterState.")
+	kubeClient := asrProvider.createKubeClient()
+	nodeList, err := kubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	//allNodes, err := allNodeLister.List()
+	if err != nil {
+		glog.Errorf("Failed to list all nodes: %v", err)
+	}
+	// print out node names
+	for _, aNode := range nodeList.Items {
+		glog.V(4).Info("Node: ", aNode.Name, "Alloc mem: ", aNode.Status.Allocatable.Memory())
+	}
+
+	podList, err := kubeClient.CoreV1().Pods(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		glog.Errorf("Failed to list all pods: %v", err)
+	}
+	// print out pods names
+	//for _, aPod := range podList.Items {
+	//	glog.V(4).Info("Pod: ", aPod.Name)
+	//}
+
+	servList, err := kubeClient.AppsV1().Deployments(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		glog.Errorf("Failed to list all services: %v", err)
+	}
+	// print out service names
+	for _, aServ := range servList.Items {
+		glog.V(4).Info("Service: ", aServ.Name, " replicas: ", aServ.Status.Replicas)
+	}
+	state := &AutoScalrClusterState{
+		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
+		AwsRegion:    os.Getenv("AWS_REGION"),
+		AutoScalingGroupName:    os.Getenv("AUTOSCALING_GROUP_NAME"),
+		Deployments: servList.Items,
+		Nodes: nodeList.Items,
+	}
+	rc, err := SendClusterState(state)
+	glog.V(4).Info("AutoScalrClusterState returned: ", rc)
+	if err != nil {
+		glog.Errorf("Error in SendClusterState: %v", err)
+	} else {
+		err = fmt.Errorf("CollectClusterState.Completed")
+	}
+	return err
+}
+
+func (asrProvider *autoScalrCloudProvider) createKubeClient() kube_client.Interface {
+	url, err := url.Parse("")
+	kubeConfig, err := config.GetKubeClientConfig(url)
+	if err != nil {
+		glog.Fatalf("Failed to build Kubernetes client configuration: %v", err)
+	}
+	return kube_client.NewForConfigOrDie(kubeConfig)
 }
 
 // asrNodeGroup implements NodeGroup interface, defaulting to pass through to awsNodeGroup object

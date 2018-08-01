@@ -28,6 +28,8 @@ import (
 	"strings"
 	"strconv"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	apiappsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 // AutoScalrManager is handles communication and data caching.
@@ -98,6 +100,18 @@ type AutoScalrNodeDeleteRequest struct {
 	AsrAppDef   *AppDefNodeDelete `json:"autoscalr_app_def"`
 }
 
+type AutoScalrClusterState struct {
+	AsrToken    string  `json:"api_key"`
+	AwsRegion   string  `json:"AwsRegion"`
+	AutoScalingGroupName   string  `json:"AutoScalingGroupName"`
+	Deployments []apiappsv1.Deployment `json:"deployments"`
+	Nodes []apiv1.Node `json:"nodes"`
+}
+
+type AsrDeployment struct {
+	Name    string  `json:"Name"`
+}
+
 type AsrApiErrorResponse struct {
 	Error    *AsrApiError  `json:"error"`
 }
@@ -118,6 +132,42 @@ func numVCpusBaseType() int {
 func InstanceIdFromProviderId(id string) (string) {
 	splitted := strings.Split(id[7:], "/")
 	return splitted[1]
+}
+
+func SendClusterState(cState *AutoScalrClusterState) (int, error) {
+	url := "https://api.autoscalr.com/v1/k8sClusterState"
+	client := &http.Client{
+		Timeout: time.Second * 20,
+	}
+	postBody := new(bytes.Buffer)
+	json.NewEncoder(postBody).Encode(cState)
+	resp, err := client.Post(url, "application/json", postBody)
+	if resp != nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			// make 2 copies of response, one for error decoding and one for good response
+			respBuf := new(bytes.Buffer)
+			respBuf.ReadFrom(resp.Body)
+			errBuf := bytes.NewBuffer(respBuf.Bytes())
+			// Check for error response json
+			jsonErr := new(AsrApiErrorResponse)
+			json.NewDecoder(errBuf).Decode(jsonErr)
+			if jsonErr.Error != nil && jsonErr.Error.ErrorMessage != ""  {
+				// error response
+				err = errors.New(fmt.Sprintf("Error response: %s", jsonErr.Error.ErrorMessage))
+			} else {
+				// looks like good response
+				//json.NewDecoder(respBuf).Decode(app)
+			}
+			return resp.StatusCode, err
+		} else {
+			err = errors.New(fmt.Sprintf("k8sClusterStateAPI returned: %d", resp.Status))
+			return resp.StatusCode, err
+		}
+	} else {
+		//log.Println("Error: %s", err.Error())
+		return 500, err
+	}
 }
 
 func makeApiCall(asrReq *AutoScalrRequest) (int, *AppDef, error) {

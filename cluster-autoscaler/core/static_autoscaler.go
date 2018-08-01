@@ -115,8 +115,12 @@ func (a *StaticAutoscaler) RunOnce(currentTime time.Time) errors.AutoscalerError
 
 	err := autoscalingContext.CloudProvider.Refresh()
 	if err != nil {
-		glog.Errorf("Failed to refresh cloud provider config: %v", err)
-		return errors.ToAutoscalerError(errors.CloudProviderError, err)
+		if err.Error() == "CollectClusterState.Completed" {
+			// Set to TransientError to stop rest of scaling processing this loop
+			return errors.ToAutoscalerError(errors.TransientError, err)
+		} else {
+			return errors.ToAutoscalerError(errors.CloudProviderError, err)
+		}
 	}
 
 	allNodes, err := allNodeLister.List()
