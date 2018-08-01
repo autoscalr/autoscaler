@@ -31,6 +31,7 @@ import (
 	"net/url"
 	"os"
 	"fmt"
+	"time"
 )
 
 const (
@@ -117,6 +118,8 @@ func (asrProvider *autoScalrCloudProvider) GetResourceLimiter() (*cloudprovider.
 	return asrProvider.awsProvider.GetResourceLimiter()
 }
 
+var launchTime = time.Now()
+
 // Refresh is called before every main loop and can be used to dynamically update cloud provider state.
 // In particular the list of node groups returned by NodeGroups can change as a result of CloudProvider.Refresh().
 func (asrProvider *autoScalrCloudProvider) Refresh() error {
@@ -124,6 +127,13 @@ func (asrProvider *autoScalrCloudProvider) Refresh() error {
 	if err != nil {
 		glog.Errorf("Failed to refresh cloud provider config: %v", err)
 		return err
+	}
+	var execTime = time.Now()
+	var elapsedTime = execTime.Sub(launchTime)
+	glog.V(4).Info("Running for ", elapsedTime.Hours(), " hours" )
+	if elapsedTime.Hours() > 24 {
+		glog.V(4).Info("Running over 24 hours, exiting to force restart.")
+		os.Exit(0)
 	}
 
 	depFlag := os.Getenv("ANAYLZE_DEPLOYMENTS")
@@ -147,10 +157,10 @@ func (asrProvider *autoScalrCloudProvider) CollectClusterState() error {
 		glog.V(4).Info("Node: ", aNode.Name, "Alloc mem: ", aNode.Status.Allocatable.Memory())
 	}
 
-	podList, err := kubeClient.CoreV1().Pods(apiv1.NamespaceAll).List(metav1.ListOptions{})
-	if err != nil {
-		glog.Errorf("Failed to list all pods: %v", err)
-	}
+	//podList, err := kubeClient.CoreV1().Pods(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	//if err != nil {
+	//	glog.Errorf("Failed to list all pods: %v", err)
+	//}
 	// print out pods names
 	//for _, aPod := range podList.Items {
 	//	glog.V(4).Info("Pod: ", aPod.Name)
