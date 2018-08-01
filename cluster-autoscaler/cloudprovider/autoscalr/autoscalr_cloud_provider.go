@@ -18,6 +18,7 @@ package autoscalr
 
 import (
 	"os"
+	"time"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiv1 "k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
@@ -128,8 +129,17 @@ func (asrNG *asrNodeGroup) MinSize() int {
 	return asrNG.awsNodeGroup.MinSize()
 }
 
+var launchTime = time.Now()
+
 func (asrNG *asrNodeGroup) TargetSize() (int, error) {
 	//glog.V(0).Infof("AsrNodeGroup::TargetSize")
+	var execTime = time.Now()
+	var elapsedTime = execTime.Sub(launchTime)
+	glog.V(4).Info("Running for ", elapsedTime.Hours(), " hours" )
+	if elapsedTime.Hours() > 24 {
+		glog.V(4).Info("Running over 24 hours, exiting to force restart.")
+		os.Exit(0)
+	}
 	app, err := appDefRead()
 	tSize := 0
 	if err != nil {
