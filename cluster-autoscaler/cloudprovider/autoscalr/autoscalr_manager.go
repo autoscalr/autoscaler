@@ -48,6 +48,7 @@ func CreateAutoScalrManager(configReader io.Reader) (*AutoScalrManager, error) {
 type AppDef struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
 	AwsRegion                   string   `json:"aws_region"`
+	AppType						string	 `json:"app_type"`
 	InstanceTypes               []string `json:"instance_types"`
 	ScaleMode                   string   `json:"scale_mode"`
 	MaxSpotPercentTotal         int      `json:"max_spot_percent_total"`
@@ -244,6 +245,7 @@ func appDefCreate() error {
 		AsrAppDef: &AppDef{
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
+			AppType:					 "k8s",
 			InstanceTypes:               instanceTypesArr,
 			ScaleMode:                   "fixed",
 			MaxSpotPercentTotal:         maxSpotPercTotal,
