@@ -86,6 +86,7 @@ type AppDefNodeDelete struct {
 type AutoScalrRequest struct {
 	AsrToken    string  `json:"api_key"`
 	RequestType string  `json:"request_type"`
+	OverwriteExisting bool `json:"overwrite_existing"`
 	AsrAppDef   *AppDef `json:"autoscalr_app_def"`
 }
 
@@ -293,6 +294,7 @@ func appDefCreate() error {
 	body := &AutoScalrRequest{
 		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
 		RequestType: "Create",
+		OverwriteExisting: true,
 		AsrAppDef: &AppDef{
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
