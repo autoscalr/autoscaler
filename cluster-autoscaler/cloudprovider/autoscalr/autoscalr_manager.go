@@ -308,7 +308,7 @@ func appDefCreate() error {
 			TargetSpareMemoryPercent:    0,
 			QueueName:                   "",
 			TargetQueueSize:             0,
-			InstanceSpinUpSeconds:       15,
+			InstanceSpinUpSeconds:       120,
 			MaxMinutesToTargetQueueSize: 0,
 			DisplayName:                 os.Getenv("DISPLAY_NAME"),
 			DetailedMonitoringEnabled:   detailedMonitoring,
