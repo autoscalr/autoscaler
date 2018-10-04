@@ -75,6 +75,7 @@ type AppDefUpdate struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
 	AwsRegion                   string   `json:"aws_region"`
 	TargetCapacity		        int      `json:"target_capacity"`
+	AppType						string	 `json:"app_type"`
 }
 type AppDefNodeDelete struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
@@ -106,6 +107,7 @@ type AutoScalrClusterState struct {
 	AsrToken    string  `json:"api_key"`
 	AwsRegion   string  `json:"AwsRegion"`
 	AutoScalingGroupName   string  `json:"AutoScalingGroupName"`
+	AppType				   string	 `json:"app_type"`
 	Deployments []apiappsv1.Deployment `json:"deployments"`
 	Nodes []apiv1.Node `json:"nodes"`
 }
@@ -142,6 +144,7 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 		Timeout: time.Second * 20,
 	}
 	postBody := new(bytes.Buffer)
+	cState.AppType = "k8s"
 	json.NewEncoder(postBody).Encode(cState)
 	resp, err := client.Post(url, "application/json", postBody)
 	if resp != nil {
@@ -294,7 +297,7 @@ func appDefCreate() error {
 	body := &AutoScalrRequest{
 		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
 		RequestType: "Create",
-		OverwriteExisting: true,
+		OverwriteExisting: false,
 		AsrAppDef: &AppDef{
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
@@ -308,7 +311,7 @@ func appDefCreate() error {
 			TargetSpareMemoryPercent:    0,
 			QueueName:                   "",
 			TargetQueueSize:             0,
-			InstanceSpinUpSeconds:       120,
+			InstanceSpinUpSeconds:       180,
 			MaxMinutesToTargetQueueSize: 0,
 			DisplayName:                 os.Getenv("DISPLAY_NAME"),
 			DetailedMonitoringEnabled:   detailedMonitoring,
@@ -350,6 +353,7 @@ func appDefUpdate(target_capacity int) error {
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
 			TargetCapacity:         	 target_capacity,
+			AppType:					"k8s",
 		},
 	}
 	respCode, _, err := makeUpdateApiCall(body)
