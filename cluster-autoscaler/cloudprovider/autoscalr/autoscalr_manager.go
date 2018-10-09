@@ -30,6 +30,7 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiappsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"github.com/golang/glog"
 )
 
 // AutoScalrManager is handles communication and data caching.
@@ -125,6 +126,15 @@ type AsrApiError struct {
 	Code 	 	string  `json:"code"`
 }
 
+type LabelUpdate struct {
+	InstanceId       string `json:"InstanceId"`
+	UID              string   `json:"UID"`
+	PayModel         string      `json:"PayModel"`
+}
+type SendClusterStateResponse struct {
+	LabelUpdates               []LabelUpdate `json:"LabelUpdates"`
+}
+
 func numVCpusBaseType() int {
 	instanceTypesStr := os.Getenv("INSTANCE_TYPES")
 	instanceTypesArr := strings.Split(instanceTypesStr, ",")
@@ -145,6 +155,8 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 	}
 	postBody := new(bytes.Buffer)
 	cState.AppType = "k8s"
+	sendClusterResp := new(SendClusterStateResponse)
+
 	json.NewEncoder(postBody).Encode(cState)
 	resp, err := client.Post(url, "application/json", postBody)
 	if resp != nil {
@@ -162,7 +174,8 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 				err = errors.New(fmt.Sprintf("Error response: %s", jsonErr.Error.ErrorMessage))
 			} else {
 				// looks like good response
-				//json.NewDecoder(respBuf).Decode(app)
+				json.NewDecoder(respBuf).Decode(sendClusterResp)
+				return resp.StatusCode, ApplyLabels(sendClusterResp, cState.Nodes)
 			}
 			return resp.StatusCode, err
 		} else {
@@ -173,6 +186,22 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 		//log.Println("Error: %s", err.Error())
 		return 500, err
 	}
+}
+
+func ApplyLabels(scsResp *SendClusterStateResponse, nodes []apiv1.Node) error {
+	// print out node instance ids that need labels
+	glog.V(4).Info("InstanceIds needing labels:")
+	for _, labUpd := range scsResp.LabelUpdates {
+		glog.V(4).Info("InstanceId: ", labUpd.InstanceId)
+		for _, node := range nodes {
+			if string(node.GetUID()) == labUpd.UID {
+				currLbls := node.GetLabels()
+				currLbls["autoscalr.com/paymodel"] = labUpd.PayModel
+				node.SetLabels(currLbls)
+			}
+		}
+	}
+	return nil
 }
 
 func makeApiCall(asrReq *AutoScalrRequest) (int, *AppDef, error) {

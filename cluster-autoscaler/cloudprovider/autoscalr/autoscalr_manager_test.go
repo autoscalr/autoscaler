@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"os"
+	apiv1 "k8s.io/api/core/v1"
 )
 
 func TestOne(t *testing.T) {
@@ -77,5 +78,18 @@ func TestAppDefDelete(t *testing.T){
 	os.Setenv("AWS_REGION", "us-east-1")
 
 	err := appDefDelete()
+	assert.NoError(t, err)
+}
+
+func TestApplyLabels(t *testing.T){
+	scsResp := new(SendClusterStateResponse)
+	lblEntry := new(LabelUpdate)
+	lblEntry.InstanceId = "id1"
+	lblEntry.UID = "uid1"
+	lblEntry.PayModel = "spot"
+	scsResp.LabelUpdates = append(scsResp.LabelUpdates, *lblEntry)
+	nodes := make([]apiv1.Node, 1)
+
+	err := ApplyLabels(scsResp, nodes)
 	assert.NoError(t, err)
 }
