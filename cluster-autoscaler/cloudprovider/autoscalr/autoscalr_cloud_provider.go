@@ -181,7 +181,7 @@ func (asrProvider *autoScalrCloudProvider) CollectClusterState() error {
 		Deployments: servList.Items,
 		Nodes: nodeList.Items,
 	}
-	rc, err := SendClusterState(state)
+	rc, err := SendClusterState(state, kubeClient)
 	glog.V(4).Info("AutoScalrClusterState returned: ", rc)
 	if err != nil {
 		glog.Errorf("Error in SendClusterState: %v", err)

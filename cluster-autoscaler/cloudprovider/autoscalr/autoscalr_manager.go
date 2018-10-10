@@ -30,6 +30,7 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiappsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	kube_client "k8s.io/client-go/kubernetes"
 	"github.com/golang/glog"
 )
 
@@ -148,7 +149,7 @@ func InstanceIdFromProviderId(id string) (string) {
 	return splitted[1]
 }
 
-func SendClusterState(cState *AutoScalrClusterState) (int, error) {
+func SendClusterState(cState *AutoScalrClusterState, kube_client kube_client.Interface) (int, error) {
 	url := "https://api.autoscalr.com/v1/k8sClusterState"
 	client := &http.Client{
 		Timeout: time.Second * 20,
@@ -175,7 +176,7 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 			} else {
 				// looks like good response
 				json.NewDecoder(respBuf).Decode(sendClusterResp)
-				return resp.StatusCode, ApplyLabels(sendClusterResp, cState.Nodes)
+				return resp.StatusCode, ApplyLabels(sendClusterResp, cState.Nodes, kube_client)
 			}
 			return resp.StatusCode, err
 		} else {
@@ -188,16 +189,18 @@ func SendClusterState(cState *AutoScalrClusterState) (int, error) {
 	}
 }
 
-func ApplyLabels(scsResp *SendClusterStateResponse, nodes []apiv1.Node) error {
+func ApplyLabels(scsResp *SendClusterStateResponse, nodes []apiv1.Node, kube_client kube_client.Interface) error {
 	// print out node instance ids that need labels
-	glog.V(4).Info("InstanceIds needing labels:")
 	for _, labUpd := range scsResp.LabelUpdates {
-		glog.V(4).Info("InstanceId: ", labUpd.InstanceId)
 		for _, node := range nodes {
 			if string(node.GetUID()) == labUpd.UID {
+				glog.V(4).Info("Setting autoscalr.com/paymodel label on ", labUpd.InstanceId, " as: ", labUpd.PayModel)
 				currLbls := node.GetLabels()
 				currLbls["autoscalr.com/paymodel"] = labUpd.PayModel
 				node.SetLabels(currLbls)
+				if _, err := kube_client.CoreV1().Nodes().Update(&node); err != nil {
+					return errors.New("Failed to update label " + err.Error())
+				}
 			}
 		}
 	}
