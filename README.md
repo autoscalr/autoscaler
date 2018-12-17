@@ -11,7 +11,7 @@ is to update 3 items in your existing yaml file:
 
 - container image to: autoscalr/k8s_autoscalr
 - cloud-provider to: autoscalr
-- set desired parameter(s) in env section of yaml file
+- set desired parameter(s) in env section of yaml file 
 
 To illustrate, here are the changes in diff format required to the 1 ASG example yaml provided [here](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md#1-asg-setup-min-1-max-10-asg-name-k8s-worker-asg-1)
 
