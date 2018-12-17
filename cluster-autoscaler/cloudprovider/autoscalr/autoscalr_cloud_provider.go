@@ -165,6 +165,7 @@ func (asrProvider *autoScalrCloudProvider) CollectClusterState() error {
 	//for _, aPod := range podList.Items {
 	//	glog.V(4).Info("Pod: ", aPod.Name)
 	//}
+	// not needed now
 
 	servList, err := kubeClient.AppsV1().Deployments(apiv1.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
