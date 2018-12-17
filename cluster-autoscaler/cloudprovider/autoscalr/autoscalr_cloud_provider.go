@@ -17,6 +17,7 @@ limitations under the License.
 package autoscalr
 
 import (
+<<<<<<< HEAD
 	"os"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	apiv1 "k8s.io/api/core/v1"
@@ -26,6 +27,28 @@ import (
 	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
 	"github.com/golang/glog"
 	"k8s.io/autoscaler/cluster-autoscaler/config/dynamic"
+=======
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
+	"k8s.io/autoscaler/cluster-autoscaler/utils/errors"
+	"k8s.io/kubernetes/pkg/scheduler/schedulercache"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/golang/glog"
+	//"k8s.io/client-go/rest"
+	kube_client "k8s.io/client-go/kubernetes"
+	"k8s.io/autoscaler/cluster-autoscaler/config"
+	"net/url"
+	"os"
+	"fmt"
+	"time"
+)
+
+const (
+	// ProviderName is the cloud provider name for AWS
+	ProviderName = "autoscalr"
+>>>>>>> cluster-autoscaler-release-1.2
 )
 
 // autoScalrCloudProvider implements CloudProvider interface.
@@ -34,6 +57,7 @@ type autoScalrCloudProvider struct {
 	awsProvider			cloudprovider.CloudProvider
 }
 
+<<<<<<< HEAD
 func BuildAutoScalrCloudProvider(autoScalrManager *AutoScalrManager, discoveryOpts cloudprovider.NodeGroupDiscoveryOptions, resourceLimiter *cloudprovider.ResourceLimiter, awsManager *aws.AwsManager) (*autoScalrCloudProvider, error) {
 	awsProv, err := aws.BuildAwsCloudProvider(awsManager, discoveryOpts, resourceLimiter)
 	if err != nil {
@@ -48,6 +72,13 @@ func BuildAutoScalrCloudProvider(autoScalrManager *AutoScalrManager, discoveryOp
 				os.Setenv("AUTOSCALING_GROUP_NAME", specObj.Name)
 			}
 		}
+=======
+func BuildAutoScalrCloudProvider(autoScalrManager *AutoScalrManager, resourceLimiter *cloudprovider.ResourceLimiter, awsManager *aws.AwsManager) (*autoScalrCloudProvider, error) {
+	awsProv, err := aws.BuildAwsCloudProvider(awsManager, resourceLimiter)
+	if err != nil {
+		glog.V(0).Infof("Received error from BuildAwsCloudProvider: %s", err.Error())
+	} else {
+>>>>>>> cluster-autoscaler-release-1.2
 		createAsrAppIfNeeded()
 		provider := &autoScalrCloudProvider{
 			autoScalrManager: autoScalrManager,
@@ -63,6 +94,14 @@ func createAsrAppIfNeeded() error {
 	return err
 }
 
+<<<<<<< HEAD
+=======
+// Cleanup stops the go routine that is handling the current view of the ASGs in the form of a cache
+func (asrProvider *autoScalrCloudProvider) Cleanup() error {
+	return nil
+}
+
+>>>>>>> cluster-autoscaler-release-1.2
 // Name returns name of the cloud provider.
 func (asrProvider *autoScalrCloudProvider) Name() string {
 	return "autoscalr"
@@ -101,6 +140,7 @@ func (asrProvider *autoScalrCloudProvider) GetAvailableMachineTypes() ([]string,
 
 // NewNodeGroup builds a theoretical node group based on the node definition provided. The node group is not automatically
 // created on the cloud provider side. The node group is not returned by NodeGroups() until it is created.
+<<<<<<< HEAD
 func (asrProvider *autoScalrCloudProvider) NewNodeGroup(machineType string, labels map[string]string, extraResources map[string]resource.Quantity) (cloudprovider.NodeGroup, error) {
 	awsNg, err := asrProvider.awsProvider.NewNodeGroup(machineType, labels, extraResources)
 	if err != nil {
@@ -109,6 +149,11 @@ func (asrProvider *autoScalrCloudProvider) NewNodeGroup(machineType string, labe
 		// wrap in asrNode
 		return BuildAutoScalrNodeGroup(awsNg), err
 	}
+=======
+func (asrProvider *autoScalrCloudProvider) NewNodeGroup(machineType string, labels map[string]string, systemLabels map[string]string,
+	extraResources map[string]resource.Quantity) (cloudprovider.NodeGroup, error) {
+	return asrProvider.awsProvider.NewNodeGroup(machineType, labels, systemLabels, extraResources )
+>>>>>>> cluster-autoscaler-release-1.2
 }
 
 // GetResourceLimiter returns struct containing limits (max, min) for resources (cores, memory etc.).
@@ -116,15 +161,98 @@ func (asrProvider *autoScalrCloudProvider) GetResourceLimiter() (*cloudprovider.
 	return asrProvider.awsProvider.GetResourceLimiter()
 }
 
+<<<<<<< HEAD
 // Cleanup stops the go routine that is handling the current view of the ASGs in the form of a cache
 func (asrProvider *autoScalrCloudProvider) Cleanup() error {
 	return asrProvider.awsProvider.Cleanup()
 }
+=======
+var launchTime = time.Now()
+>>>>>>> cluster-autoscaler-release-1.2
 
 // Refresh is called before every main loop and can be used to dynamically update cloud provider state.
 // In particular the list of node groups returned by NodeGroups can change as a result of CloudProvider.Refresh().
 func (asrProvider *autoScalrCloudProvider) Refresh() error {
+<<<<<<< HEAD
 	return asrProvider.awsProvider.Refresh()
+=======
+	err := asrProvider.awsProvider.Refresh()
+	if err != nil {
+		glog.Errorf("Failed to refresh cloud provider config: %v", err)
+		return err
+	}
+	var execTime = time.Now()
+	var elapsedTime = execTime.Sub(launchTime)
+	glog.V(4).Info("Running for ", elapsedTime.Hours(), " hours" )
+	if elapsedTime.Hours() > 24 {
+		glog.V(4).Info("Running over 24 hours, exiting to force restart.")
+		os.Exit(0)
+	}
+
+	depFlag := os.Getenv("ANAYLZE_DEPLOYMENTS")
+	if depFlag != "false" {
+		err = asrProvider.CollectClusterState()
+	}
+	return err
+}
+
+func (asrProvider *autoScalrCloudProvider) CollectClusterState() error {
+	glog.V(4).Info("Starting CollectClusterState.")
+	kubeClient := asrProvider.createKubeClient()
+	nodeList, err := kubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	//allNodes, err := allNodeLister.List()
+	if err != nil {
+		glog.Errorf("Failed to list all nodes: %v", err)
+	}
+	// print out node names
+	for _, aNode := range nodeList.Items {
+		glog.V(4).Info("Node: ", aNode.Name, "Alloc mem: ", aNode.Status.Allocatable.Memory())
+	}
+
+	//podList, err := kubeClient.CoreV1().Pods(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	//if err != nil {
+	//	glog.Errorf("Failed to list all pods: %v", err)
+	//}
+	// print out pods names
+	//for _, aPod := range podList.Items {
+	//	glog.V(4).Info("Pod: ", aPod.Name)
+	//}
+	// not needed now
+
+	servList, err := kubeClient.AppsV1().Deployments(apiv1.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		glog.Errorf("Failed to list all services: %v", err)
+	}
+	// print out service names
+	for _, aServ := range servList.Items {
+		glog.V(4).Info("Service: ", aServ.Name, " replicas: ", aServ.Status.Replicas)
+	}
+	state := &AutoScalrClusterState{
+		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
+		AwsRegion:    os.Getenv("AWS_REGION"),
+		AutoScalingGroupName:    os.Getenv("AUTOSCALING_GROUP_NAME"),
+		Deployments: servList.Items,
+		Nodes: nodeList.Items,
+	}
+	rc, err := SendClusterState(state, kubeClient)
+	glog.V(4).Info("AutoScalrClusterState returned: ", rc)
+	if err != nil {
+		glog.Errorf("Error in SendClusterState: %v", err)
+	} else {
+		err = fmt.Errorf("CollectClusterState.Completed")
+	}
+	return err
+}
+
+func (asrProvider *autoScalrCloudProvider) createKubeClient() kube_client.Interface {
+	url, err := url.Parse("")
+	kubeConfig, err := config.GetKubeClientConfig(url)
+	if err != nil {
+		glog.Fatalf("Failed to build Kubernetes client configuration: %v", err)
+	}
+	return kube_client.NewForConfigOrDie(kubeConfig)
+>>>>>>> cluster-autoscaler-release-1.2
 }
 
 // asrNodeGroup implements NodeGroup interface, defaulting to pass through to awsNodeGroup object
@@ -217,7 +345,11 @@ func (asrNG *asrNodeGroup) Debug() string {
 }
 
 func (asrNG *asrNodeGroup) Nodes() ([]string, error) {
+<<<<<<< HEAD
 	//glog.V(0).Infof("AsrNodeGroup::Nodes")
+=======
+	glog.V(0).Infof("AsrNodeGroup::Nodes")
+>>>>>>> cluster-autoscaler-release-1.2
 	return asrNG.awsNodeGroup.Nodes()
 }
 

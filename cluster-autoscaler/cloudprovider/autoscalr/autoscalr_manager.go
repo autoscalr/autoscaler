@@ -27,6 +27,14 @@ import (
 	"os"
 	"strings"
 	"strconv"
+<<<<<<< HEAD
+=======
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	apiappsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	kube_client "k8s.io/client-go/kubernetes"
+	"github.com/golang/glog"
+>>>>>>> cluster-autoscaler-release-1.2
 )
 
 // AutoScalrManager is handles communication and data caching.
@@ -34,20 +42,33 @@ type AutoScalrManager struct {
 	random   string
 }
 
+<<<<<<< HEAD
 func createAutoScalrManagerInternal(configReader io.Reader) (*AutoScalrManager, error) {
+=======
+func createAutoScalrManagerInternal(configReader io.Reader, discoveryOpts cloudprovider.NodeGroupDiscoveryOptions) (*AutoScalrManager, error) {
+>>>>>>> cluster-autoscaler-release-1.2
 	manager := &AutoScalrManager{
 		random: "Test-jay",
 	}
 	return manager, nil
 }
 
+<<<<<<< HEAD
 func CreateAutoScalrManager(configReader io.Reader) (*AutoScalrManager, error) {
 	return createAutoScalrManagerInternal(configReader)
+=======
+func CreateAutoScalrManager(configReader io.Reader, discoveryOpts cloudprovider.NodeGroupDiscoveryOptions) (*AutoScalrManager, error) {
+	return createAutoScalrManagerInternal(configReader, discoveryOpts)
+>>>>>>> cluster-autoscaler-release-1.2
 }
 
 type AppDef struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
 	AwsRegion                   string   `json:"aws_region"`
+<<<<<<< HEAD
+=======
+	AppType						string	 `json:"app_type"`
+>>>>>>> cluster-autoscaler-release-1.2
 	InstanceTypes               []string `json:"instance_types"`
 	ScaleMode                   string   `json:"scale_mode"`
 	MaxSpotPercentTotal         int      `json:"max_spot_percent_total"`
@@ -57,6 +78,10 @@ type AppDef struct {
 	TargetSpareMemoryPercent    int      `json:"target_spare_memory_percent"`
 	QueueName                   string   `json:"queue_name"`
 	TargetQueueSize             int      `json:"target_queue_size"`
+<<<<<<< HEAD
+=======
+	InstanceSpinUpSeconds       int      `json:"instance_spin_up_seconds"`
+>>>>>>> cluster-autoscaler-release-1.2
 	MaxMinutesToTargetQueueSize int      `json:"max_minutes_to_target_queue_size"`
 	DisplayName                 string   `json:"display_name"`
 	DetailedMonitoringEnabled   bool     `json:"detailed_monitoring_enabled"`
@@ -70,6 +95,10 @@ type AppDefUpdate struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
 	AwsRegion                   string   `json:"aws_region"`
 	TargetCapacity		        int      `json:"target_capacity"`
+<<<<<<< HEAD
+=======
+	AppType						string	 `json:"app_type"`
+>>>>>>> cluster-autoscaler-release-1.2
 }
 type AppDefNodeDelete struct {
 	AutoScalingGroupName        string   `json:"aws_autoscaling_group_name"`
@@ -81,6 +110,10 @@ type AppDefNodeDelete struct {
 type AutoScalrRequest struct {
 	AsrToken    string  `json:"api_key"`
 	RequestType string  `json:"request_type"`
+<<<<<<< HEAD
+=======
+	OverwriteExisting bool `json:"overwrite_existing"`
+>>>>>>> cluster-autoscaler-release-1.2
 	AsrAppDef   *AppDef `json:"autoscalr_app_def"`
 }
 
@@ -96,6 +129,22 @@ type AutoScalrNodeDeleteRequest struct {
 	AsrAppDef   *AppDefNodeDelete `json:"autoscalr_app_def"`
 }
 
+<<<<<<< HEAD
+=======
+type AutoScalrClusterState struct {
+	AsrToken    string  `json:"api_key"`
+	AwsRegion   string  `json:"AwsRegion"`
+	AutoScalingGroupName   string  `json:"AutoScalingGroupName"`
+	AppType				   string	 `json:"app_type"`
+	Deployments []apiappsv1.Deployment `json:"deployments"`
+	Nodes []apiv1.Node `json:"nodes"`
+}
+
+type AsrDeployment struct {
+	Name    string  `json:"Name"`
+}
+
+>>>>>>> cluster-autoscaler-release-1.2
 type AsrApiErrorResponse struct {
 	Error    *AsrApiError  `json:"error"`
 }
@@ -105,6 +154,18 @@ type AsrApiError struct {
 	Code 	 	string  `json:"code"`
 }
 
+<<<<<<< HEAD
+=======
+type LabelUpdate struct {
+	InstanceId       string `json:"InstanceId"`
+	UID              string   `json:"UID"`
+	PayModel         string      `json:"PayModel"`
+}
+type SendClusterStateResponse struct {
+	LabelUpdates               []LabelUpdate `json:"LabelUpdates"`
+}
+
+>>>>>>> cluster-autoscaler-release-1.2
 func numVCpusBaseType() int {
 	instanceTypesStr := os.Getenv("INSTANCE_TYPES")
 	instanceTypesArr := strings.Split(instanceTypesStr, ",")
@@ -118,6 +179,67 @@ func InstanceIdFromProviderId(id string) (string) {
 	return splitted[1]
 }
 
+<<<<<<< HEAD
+=======
+func SendClusterState(cState *AutoScalrClusterState, kube_client kube_client.Interface) (int, error) {
+	url := "https://api.autoscalr.com/v1/k8sClusterState"
+	client := &http.Client{
+		Timeout: time.Second * 20,
+	}
+	postBody := new(bytes.Buffer)
+	cState.AppType = "k8s"
+	sendClusterResp := new(SendClusterStateResponse)
+
+	json.NewEncoder(postBody).Encode(cState)
+	resp, err := client.Post(url, "application/json", postBody)
+	if resp != nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			// make 2 copies of response, one for error decoding and one for good response
+			respBuf := new(bytes.Buffer)
+			respBuf.ReadFrom(resp.Body)
+			errBuf := bytes.NewBuffer(respBuf.Bytes())
+			// Check for error response json
+			jsonErr := new(AsrApiErrorResponse)
+			json.NewDecoder(errBuf).Decode(jsonErr)
+			if jsonErr.Error != nil && jsonErr.Error.ErrorMessage != ""  {
+				// error response
+				err = errors.New(fmt.Sprintf("Error response: %s", jsonErr.Error.ErrorMessage))
+			} else {
+				// looks like good response
+				json.NewDecoder(respBuf).Decode(sendClusterResp)
+				return resp.StatusCode, ApplyLabels(sendClusterResp, cState.Nodes, kube_client)
+			}
+			return resp.StatusCode, err
+		} else {
+			err = errors.New(fmt.Sprintf("k8sClusterStateAPI returned: %d", resp.Status))
+			return resp.StatusCode, err
+		}
+	} else {
+		//log.Println("Error: %s", err.Error())
+		return 500, err
+	}
+}
+
+func ApplyLabels(scsResp *SendClusterStateResponse, nodes []apiv1.Node, kube_client kube_client.Interface) error {
+	// print out node instance ids that need labels
+	for _, labUpd := range scsResp.LabelUpdates {
+		for _, node := range nodes {
+			if string(node.GetUID()) == labUpd.UID {
+				glog.V(4).Info("Setting autoscalr.com/paymodel label on ", labUpd.InstanceId, " as: ", labUpd.PayModel)
+				currLbls := node.GetLabels()
+				currLbls["autoscalr.com/paymodel"] = labUpd.PayModel
+				node.SetLabels(currLbls)
+				if _, err := kube_client.CoreV1().Nodes().Update(&node); err != nil {
+					return errors.New("Failed to update label " + err.Error())
+				}
+			}
+		}
+	}
+	return nil
+}
+
+>>>>>>> cluster-autoscaler-release-1.2
 func makeApiCall(asrReq *AutoScalrRequest) (int, *AppDef, error) {
 	url := "https://app.autoscalr.com/api/autoScalrApp"
 	client := &http.Client{
@@ -240,9 +362,17 @@ func appDefCreate() error {
 	body := &AutoScalrRequest{
 		AsrToken:    os.Getenv("AUTOSCALR_API_KEY"),
 		RequestType: "Create",
+<<<<<<< HEAD
 		AsrAppDef: &AppDef{
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
+=======
+		OverwriteExisting: false,
+		AsrAppDef: &AppDef{
+			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
+			AwsRegion:                   os.Getenv("AWS_REGION"),
+			AppType:					 "k8s",
+>>>>>>> cluster-autoscaler-release-1.2
 			InstanceTypes:               instanceTypesArr,
 			ScaleMode:                   "fixed",
 			MaxSpotPercentTotal:         maxSpotPercTotal,
@@ -252,6 +382,10 @@ func appDefCreate() error {
 			TargetSpareMemoryPercent:    0,
 			QueueName:                   "",
 			TargetQueueSize:             0,
+<<<<<<< HEAD
+=======
+			InstanceSpinUpSeconds:       180,
+>>>>>>> cluster-autoscaler-release-1.2
 			MaxMinutesToTargetQueueSize: 0,
 			DisplayName:                 os.Getenv("DISPLAY_NAME"),
 			DetailedMonitoringEnabled:   detailedMonitoring,
@@ -293,6 +427,10 @@ func appDefUpdate(target_capacity int) error {
 			AutoScalingGroupName:        os.Getenv("AUTOSCALING_GROUP_NAME"),
 			AwsRegion:                   os.Getenv("AWS_REGION"),
 			TargetCapacity:         	 target_capacity,
+<<<<<<< HEAD
+=======
+			AppType:					"k8s",
+>>>>>>> cluster-autoscaler-release-1.2
 		},
 	}
 	respCode, _, err := makeUpdateApiCall(body)

@@ -1,7 +1,18 @@
-commit bfab46cf2543ac17f8c0e75b80631555ac7a6aed (origin/release-1.8)
-Merge: a213f6cf88 46ff2c44c7
-Author: Adam Worrall <abw@google.com>
-Date:   Thu Sep 21 16:17:36 2017 -0700
+commit 9b9536a51bcc628064da6468ba21668896f48bf4 (origin/release-1.10)
+Merge: 1602726267 f1a24f4b2c
+Author: Kubernetes Submit Queue <k8s-merge-robot@users.noreply.github.com>
+Date:   Mon Apr 9 18:56:06 2018 -0700
 
-    Merge remote-tracking branch 'origin/master' into release-1.8
-
+    Merge pull request #62228 from dims/automated-cherry-pick-of-#61890-upstream-release-1.10
+    
+    Automatic merge from submit-queue.
+    
+    Automated cherry pick of #61890: Specify DHCP domain for hostname
+    
+    Cherry pick of #61890 on release-1.10.
+    
+    #61890: Specify DHCP domain for hostname
+    
+    ```release-note
+    Fixing bug in openstack cloud provider when picking up hostname from metadata service or config drive. If the hostname has a custom domain, we should remove the domain before we use the hostname as the node name in kubernetes.
+    ```

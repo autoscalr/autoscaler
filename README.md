@@ -5,8 +5,13 @@ This repository contains a version of the Kubernetes Cluster AutoScaler componen
 
 ## Usage
 
+<<<<<<< HEAD
 If you have a working kubernetes/autoscaler deployment all you have to do enable AutoScalr and start saving money 
 is to update 3 items in your existing yaml file:
+=======
+[Cluster Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) - a component that automatically adjusts the size of a Kubernetes
+Cluster so that all pods have a place to run and there are no unneeded nodes. Works with GCP, AWS and Azure. Version 1.0 (GA) was released with kubernetes 1.8.
+>>>>>>> cluster-autoscaler-release-1.2
 
 - container image to: autoscalr/k8s_autoscalr
 - cloud-provider to: autoscalr

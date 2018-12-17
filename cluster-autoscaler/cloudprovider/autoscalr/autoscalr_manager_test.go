@@ -19,7 +19,13 @@ package autoscalr
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+<<<<<<< HEAD
 	"os"
+=======
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	"os"
+	apiv1 "k8s.io/api/core/v1"
+>>>>>>> cluster-autoscaler-release-1.2
 )
 
 func TestOne(t *testing.T) {
@@ -27,7 +33,12 @@ func TestOne(t *testing.T) {
 }
 
 func TestCreateAutoScalrManager(t *testing.T) {
+<<<<<<< HEAD
 	asrMgr, _ := CreateAutoScalrManager(nil)
+=======
+	do := cloudprovider.NodeGroupDiscoveryOptions{}
+	asrMgr, _ := CreateAutoScalrManager(nil, do)
+>>>>>>> cluster-autoscaler-release-1.2
 	assert.NotNil(t, asrMgr)
 }
 
@@ -77,3 +88,19 @@ func TestAppDefDelete(t *testing.T){
 	err := appDefDelete()
 	assert.NoError(t, err)
 }
+<<<<<<< HEAD
+=======
+
+func TestApplyLabels(t *testing.T){
+	scsResp := new(SendClusterStateResponse)
+	lblEntry := new(LabelUpdate)
+	lblEntry.InstanceId = "id1"
+	lblEntry.UID = "uid1"
+	lblEntry.PayModel = "spot"
+	scsResp.LabelUpdates = append(scsResp.LabelUpdates, *lblEntry)
+	nodes := make([]apiv1.Node, 1)
+
+	err := ApplyLabels(scsResp, nodes)
+	assert.NoError(t, err)
+}
+>>>>>>> cluster-autoscaler-release-1.2

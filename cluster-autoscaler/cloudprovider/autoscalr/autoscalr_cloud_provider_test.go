@@ -21,8 +21,13 @@ import (
 	"os"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+<<<<<<< HEAD
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
+=======
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/aws"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+>>>>>>> cluster-autoscaler-release-1.2
 )
 
 func SetEnvTestCase1() {
@@ -39,12 +44,21 @@ func SetEnvTestCase1() {
 	os.Setenv("TARGET_CAPACITY_INSTANCES", "2")
 	os.Setenv("TARGET_SPARE_MEMORY_PERCENT", "20")
 }
+<<<<<<< HEAD
 func getDiscoveryOptionsTestCase1() cloudprovider.NodeGroupDiscoveryOptions {
 	return cloudprovider.NodeGroupDiscoveryOptions{
 		NodeGroupSpecs: []string{"1:6:asgName"},
 		NodeGroupAutoDiscoverySpec: "",
 	}
 }
+=======
+//func getDiscoveryOptionsTestCase1() cloudprovider.NodeGroupDiscoveryOptions {
+//	return cloudprovider.NodeGroupDiscoveryOptions{
+//		NodeGroupSpecs: []string{"1:6:asgName"},
+//		NodeGroupAutoDiscoverySpec: "",
+//	}
+//}
+>>>>>>> cluster-autoscaler-release-1.2
 
 func TestEnvSetCorrectly(t *testing.T) {
 	SetEnvTestCase1()
@@ -53,6 +67,7 @@ func TestEnvSetCorrectly(t *testing.T) {
 
 func TestBuildAutoScalrCloudProvider(t *testing.T) {
 	SetEnvTestCase1()
+<<<<<<< HEAD
 	asrMgr, err := CreateAutoScalrManager(nil)
 	awsMgr, err := aws.CreateAwsManager(nil)
 	assert.NoError(t, err)
@@ -61,6 +76,21 @@ func TestBuildAutoScalrCloudProvider(t *testing.T) {
 		map[string]int64{cloudprovider.ResourceNameCores: 1, cloudprovider.ResourceNameMemory: 10000000},
 		map[string]int64{cloudprovider.ResourceNameCores: 10, cloudprovider.ResourceNameMemory: 100000000})
 	asrCloudProv, err := BuildAutoScalrCloudProvider(asrMgr, discOpts, resourceLimiter, awsMgr)
+=======
+	do := cloudprovider.NodeGroupDiscoveryOptions{}
+	resourceLimiter := cloudprovider.NewResourceLimiter(
+		map[string]int64{cloudprovider.ResourceNameCores: 1, cloudprovider.ResourceNameMemory: 10000000},
+		map[string]int64{cloudprovider.ResourceNameCores: 10, cloudprovider.ResourceNameMemory: 100000000})
+
+	asrMgr, err := CreateAutoScalrManager(nil, do)
+	awsMgr, err := aws.CreateAwsManager(nil, do)
+	assert.NoError(t, err)
+	//rl := nil
+	//resourceLimiter := cloudprovider.NewResourceLimiter(
+	//	map[string]int64{cloudprovider.ResourceNameCores: 1, cloudprovider.ResourceNameMemory: 10000000},
+	//	map[string]int64{cloudprovider.ResourceNameCores: 10, cloudprovider.ResourceNameMemory: 100000000})
+	asrCloudProv, err := BuildAutoScalrCloudProvider(asrMgr, resourceLimiter, awsMgr)
+>>>>>>> cluster-autoscaler-release-1.2
 	assert.NoError(t, err)
 	assert.NotNil(t, asrCloudProv)
 	assert.Equal(t, asrCloudProv.Name(), "autoscalr")
@@ -70,7 +100,11 @@ func TestBuildAutoScalrCloudProvider(t *testing.T) {
 	assert.Equal(t, ng1.MaxSize(), 6)
 	assert.Equal(t, ng1.MinSize(), 1)
 	assert.Equal(t, ng1.Id(), "asgName")
+<<<<<<< HEAD
 	assert.True(t, ng1.Exist())
+=======
+	//assert.True(t, ng1.Exist())
+>>>>>>> cluster-autoscaler-release-1.2
 }
 
 // Create a mock for awsProvider that requests will be forwarded to by default
